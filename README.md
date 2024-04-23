@@ -53,7 +53,7 @@ if __name__ == "__main__":
 Grab the latest release with a simple pip command:
 
 ``` bash
-pip install git+https://github.com/yourgithub/uodm.git#egg=uodm
+pip install git+https://github.com/bobuk/uodm.git#egg=uodm
 ```
 
 or just `pip install uodm` if you're ok to use the latest release.
