@@ -158,6 +158,23 @@ class Collection(BaseModel, Generic[T]):
         return result
 
     @classmethod
+    async def update(cls: Type[T], items: List[T], **kwargs):
+        collection = cls.get_collection()
+        kwargs = Collection.filtering(**kwargs)
+        for item in items:
+            if item._id is None:
+                raise ValueError("Object _id isn't set")
+        await collection.update_many(
+            {"_id": {"$in": [item._id for item in items]}},
+            {"$set": kwargs},
+        )
+
+    @classmethod
+    async def save_all(cls: Type[T], items: List[T]):
+        for item in items:
+            await item.save()
+
+    @classmethod
     def get_collection(cls) -> AgnosticCollection:
         options = cls.get_model_config()
         name = str(options.get("collection", normalize(cls.__name__)))
