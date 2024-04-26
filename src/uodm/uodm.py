@@ -202,4 +202,4 @@ class Collection(BaseModel, Generic[T]):
                 key = arg.replace('_in_', '.').replace('__', '.')
                 args[key] = kwargs[arg]
                 del args[arg]
-        return kwargs
+        return args
