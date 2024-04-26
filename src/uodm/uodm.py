@@ -122,6 +122,11 @@ class Collection(BaseModel, Generic[T]):
             {"_id": self._id}, {"$set": self.model_dump()}, upsert=True
         )
 
+    async def delete(self):
+        collection = self.get_collection()
+        if self._id is not None:
+            await collection.delete_one({"_id": self._id})
+
     @classmethod
     def get_model_config(cls: Type[T]) -> dict:
         res = {}
