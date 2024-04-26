@@ -196,4 +196,10 @@ class Collection(BaseModel, Generic[T]):
         if "_id" in kwargs:
             if isinstance(kwargs["_id"], str):
                 kwargs["_id"] = ObjectId(kwargs["_id"])
+        args = kwargs.copy()
+        for arg in kwargs.keys():
+            if '_in_' in arg or '__' in arg:
+                key = arg.replace('_in_', '.').replace('__', '.')
+                args[key] = kwargs[arg]
+                del args[arg]
         return kwargs
