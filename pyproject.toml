@@ -1,6 +1,6 @@
 [project]
 name = "uodm"
-version = "0.1.5"
+version = "0.1.7"
 description = "ultraminimalistic Python library for simple object-document mappint for asyncronous mongodb"
 authors = [{ name = "Grigory Bakunov", email = "bobuk@rubedo.cloud" }]
 dependencies = ["pydantic>=2.7.0", "motor>=3.4.0"]

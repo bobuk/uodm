@@ -146,11 +146,19 @@ class Collection(BaseModel, Generic[T]):
         return cls.create(**data)
 
     @classmethod
-    async def find(cls: Type[T], **kwargs) -> List[T]:
+    async def find(cls: Type[T], sort: Optional[List[str]] = None, limit: Optional[int] = None, **kwargs) -> List[T]:
         collection = cls.get_collection()
 
         kwargs = Collection.filtering(**kwargs)
-        data = await collection.find(kwargs).to_list(None)
+        cursor = collection.find(kwargs)
+
+        if sort is not None:
+            cursor = cursor.sort(sort)
+
+        if limit is not None:
+            cursor = cursor.limit(limit)
+
+        data = await cursor.to_list(None)
         return [cls.create(**d) for d in data]
 
     @classmethod
