@@ -146,14 +146,18 @@ class Collection(BaseModel, Generic[T]):
         return cls.create(**data)
 
     @classmethod
-    async def find(cls: Type[T], sort: Optional[List[str]] = None, limit: Optional[int] = None, **kwargs) -> List[T]:
+    async def find(cls: Type[T], sort: Optional[str] = None, limit: Optional[int] = None, **kwargs) -> List[T]:
         collection = cls.get_collection()
 
         kwargs = Collection.filtering(**kwargs)
         cursor = collection.find(kwargs)
 
         if sort is not None:
-            cursor = cursor.sort(sort)
+            if sort.startswith("-"):
+                sorting = [(sort[1:], -1)]
+            else:
+                sorting = [(sort, 1)]
+            cursor = cursor.sort(sorting)
 
         if limit is not None:
             cursor = cursor.limit(limit)
