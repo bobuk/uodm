@@ -1,12 +1,17 @@
 import re
-from typing import Generic, List, Type, TypedDict, TypeVar, Optional  # noqa
+from typing import Generic, List, Type, TypeVar, Optional  # noqa
 from bson import ObjectId
 from motor import motor_asyncio
 from motor.core import AgnosticCollection, AgnosticDatabase, AgnosticClient
-from pydantic import BaseModel, Field  # noqa
-from pymongo.errors import ConfigurationError, DuplicateKeyError, PyMongoError  # noqa
+from pydantic import BaseModel, Field as PydanticField
+import pymongo.errors
 
 EmbeddedModel = BaseModel
+Field = PydanticField
+
+ConfigurationError = pymongo.errors.ConfigurationError
+DuplicateKeyError = pymongo.errors.DuplicateKeyError
+PyMongoError = pymongo.errors.PyMongoError
 
 
 def normalize(s: str) -> str:
@@ -102,7 +107,6 @@ class Idx(BaseModel):
         super().__init__(keys=real_keys, options=options)
 
 
-
 class Collection(BaseModel, Generic[T]):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -146,7 +150,9 @@ class Collection(BaseModel, Generic[T]):
         return cls.create(**data)
 
     @classmethod
-    async def find(cls: Type[T], sort: Optional[str] = None, limit: Optional[int] = None, **kwargs) -> List[T]:
+    async def find(
+        cls: Type[T], sort: Optional[str] = None, limit: Optional[int] = None, **kwargs
+    ) -> List[T]:
         collection = cls.get_collection()
 
         kwargs = Collection.filtering(**kwargs)
@@ -164,6 +170,14 @@ class Collection(BaseModel, Generic[T]):
 
         data = await cursor.to_list(None)
         return [cls.create(**d) for d in data]
+
+    @classmethod
+    async def count(cls: Type[T], **kwargs) -> int:
+        collection = cls.get_collection()
+
+        kwargs = Collection.filtering(**kwargs)
+        cursor = collection.find(kwargs)
+        return len(await cursor.to_list(None))
 
     @classmethod
     def create(cls: Type[T], **kwargs):
@@ -210,8 +224,8 @@ class Collection(BaseModel, Generic[T]):
                 kwargs["_id"] = ObjectId(kwargs["_id"])
         args = kwargs.copy()
         for arg in kwargs.keys():
-            if '_in_' in arg or '__' in arg:
-                key = arg.replace('_in_', '.').replace('__', '.')
+            if "_in_" in arg or "__" in arg:
+                key = arg.replace("_in_", ".").replace("__", ".")
                 args[key] = kwargs[arg]
                 del args[arg]
         return args

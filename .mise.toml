@@ -1,5 +1,6 @@
 [tools]
-python = "latest"
+python = "3.12.7"
+kubectl = "latest"
 
 [env]
 _.python.venv = { path = ".venv", create = true }
