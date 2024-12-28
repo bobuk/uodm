@@ -132,7 +132,7 @@ class Collection(BaseModel, Generic[T]):
             await collection.delete_one({"_id": self._id})
 
     @classmethod
-    def get_model_config(cls: Type[T]) -> dict:
+    def get_model_config(cls: Type["Collection[T]"]) -> dict:
         res = {}
         if conf_coll := getattr(cls, "__collection__", None):
             res["collection"] = conf_coll
