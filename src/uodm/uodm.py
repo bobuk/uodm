@@ -1,5 +1,5 @@
 import re
-from typing import Generic, List, Optional, Type, TypeVar  # noqa
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union  # noqa
 
 import pymongo.errors
 from bson import ObjectId
@@ -7,6 +7,8 @@ from motor import motor_asyncio
 from motor.core import AgnosticClient, AgnosticCollection, AgnosticDatabase
 from pydantic import BaseModel
 from pydantic import Field as PydanticField
+
+from .file_motor import FileMotorClient, FileMotorCollection, FileMotorDatabase
 
 EmbeddedModel = BaseModel
 Field = PydanticField
@@ -26,23 +28,30 @@ T = TypeVar("T", bound="Collection")
 
 
 class UODM:
-    def __init__(self, url: str, connect_now=True):
-        self.mongo: Optional[AgnosticClient] = None
-        self.database: Optional[AgnosticDatabase] = None
-        self.url: str = url
+    def __init__(self, url_or_client: Union[str, AgnosticClient, FileMotorClient], connect_now=True):
+        self.mongo: Optional[Union[AgnosticClient, FileMotorClient]] = None
+        self.database: Optional[Union[AgnosticDatabase, FileMotorDatabase]] = None
+        self.url_or_client = url_or_client
         if connect_now:
             self.connect()
 
     def connect(self):
         global _CURRENT_DB
-        self.mongo = motor_asyncio.AsyncIOMotorClient(self.url)
+        if isinstance(self.url_or_client, str):
+            if self.url_or_client.startswith("file://"):
+                path = self.url_or_client[7:]
+                self.mongo = FileMotorClient(path)
+            else:
+                self.mongo = motor_asyncio.AsyncIOMotorClient(self.url_or_client)
+        else:
+            self.mongo = self.url_or_client
         try:
             self.database = self.mongo.get_default_database()
         except ConfigurationError:
             pass
         _CURRENT_DB = self
 
-    def apply_connection(self, client: AgnosticClient):
+    def apply_connection(self, client: Union[AgnosticClient, FileMotorClient]):
         global _CURRENT_DB
         self.mongo = client
         default = client.get_default_database()
@@ -63,7 +72,7 @@ class UODM:
         pass
 
     @property
-    def db(self) -> AgnosticDatabase:
+    def db(self) -> Union[AgnosticDatabase, FileMotorDatabase]:
         if self.database is None:
             raise ValueError("Database is not connected")
         return self.database
@@ -83,10 +92,15 @@ class UODM:
             config = cls.get_model_config()
             for idx in config.get("indexes", []):
                 options = {}
-                if idx.options is not None:
-                    options = idx.options.model_dump(exclude_none=True)
-                options["name"] = options.get("name", ("_".join(idx.keys) + "_idx"))
-                await collection.create_index(idx.keys, **options)
+                if isinstance(idx, dict):
+                    keys = idx.get("keys", [])
+                    options = {k: v for k, v in idx.items() if k != "keys"}
+                else:
+                    keys = idx.keys
+                    if idx.options is not None:
+                        options = idx.options.model_dump(exclude_none=True)
+                options["name"] = options.get("name", ("_".join(keys) + "_idx"))
+                await collection.create_index(keys, **options)
 
 
 _CURRENT_DB: Optional[UODM] = None
@@ -119,7 +133,7 @@ class Collection(BaseModel, Generic[T]):
 
         if self._id is None:
             result = await collection.insert_one(self.model_dump())
-            self._id = result.inserted_id
+            self._id = ObjectId(result.inserted_id) if isinstance(result.inserted_id, str) else result.inserted_id
             return
         dmp = self.model_dump()
         if not self.model_validate(dmp):
@@ -208,7 +222,7 @@ class Collection(BaseModel, Generic[T]):
             await item.save()
 
     @classmethod
-    def get_collection(cls) -> AgnosticCollection:
+    def get_collection(cls) -> Union[AgnosticCollection, FileMotorCollection]:
         options = cls.get_model_config()
         name = str(options.get("collection", normalize(cls.__name__)))
 
@@ -218,7 +232,7 @@ class Collection(BaseModel, Generic[T]):
         )
 
     @staticmethod
-    def filtering(**kwargs) -> dict:
+    def filtering(**kwargs) -> Dict[str, Any]:
         if "id" in kwargs:
             kwargs["_id"] = kwargs.pop("id")
         if "_id" in kwargs:
