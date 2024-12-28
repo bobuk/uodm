@@ -1,4 +1,5 @@
 import sys
+import tempfile
 
 import mongomock
 import pytest
@@ -7,6 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 sys.path.append("src")
 
 from uodm import UODM, Collection, Field
+from uodm.file_motor import FileMotorClient
 
 
 @pytest.fixture
