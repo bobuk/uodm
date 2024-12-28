@@ -27,7 +27,7 @@ async def test_file_motor_collection_operations(temp_db_path):
         name: str = Field(...)
         value: int = Field(...)
 
-    uodm = UODM(f"file://{temp_db_path}", connect_now=True)
+    uodm = UODM(f"file://{temp_db_path}", connect_now=True)  # noqa
 
     # Test insert
     doc = TestCollection(name="test", value=42)
@@ -60,7 +60,7 @@ async def test_file_motor_find_operations(temp_db_path):
         name: str = Field(...)
         value: int = Field(...)
 
-    uodm = UODM(f"file://{temp_db_path}", connect_now=True)
+    uodm = UODM(f"file://{temp_db_path}", connect_now=True)  # noqa
 
     # Insert test data
     docs = [TestCollection(name=f"test{i}", value=i) for i in range(5)]

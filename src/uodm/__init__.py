@@ -1,10 +1,11 @@
 import importlib.metadata
+
 from bson import ObjectId
-from motor.core import AgnosticCollection, AgnosticDatabase, AgnosticClient # noqa
+from motor.core import AgnosticClient, AgnosticCollection, AgnosticDatabase  # noqa
 from pydantic import BaseModel, Field  # noqa
 from pymongo.errors import ConfigurationError, DuplicateKeyError, PyMongoError  # noqa
 
-from .uodm import UODM, IdxOpts, Idx, Collection, EmbeddedModel
+from .uodm import UODM, Collection, EmbeddedModel, Idx, IdxOpts
 
 __all__ = [
     "AgnosticCollection",
@@ -17,7 +18,6 @@ __all__ = [
     "DuplicateKeyError",
     "PyMongoError",
     "ObjectId",
-
     "UODM",
     "IdxOpts",
     "Idx",
