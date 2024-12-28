@@ -1,10 +1,12 @@
 import re
-from typing import Generic, List, Type, TypeVar, Optional  # noqa
+from typing import Generic, List, Optional, Type, TypeVar  # noqa
+
+import pymongo.errors
 from bson import ObjectId
 from motor import motor_asyncio
-from motor.core import AgnosticCollection, AgnosticDatabase, AgnosticClient
-from pydantic import BaseModel, Field as PydanticField
-import pymongo.errors
+from motor.core import AgnosticClient, AgnosticCollection, AgnosticDatabase
+from pydantic import BaseModel
+from pydantic import Field as PydanticField
 
 EmbeddedModel = BaseModel
 Field = PydanticField
@@ -122,9 +124,7 @@ class Collection(BaseModel, Generic[T]):
         dmp = self.model_dump()
         if not self.model_validate(dmp):
             raise ValueError("Model validation failed")
-        await collection.update_one(
-            {"_id": self._id}, {"$set": self.model_dump()}, upsert=True
-        )
+        await collection.update_one({"_id": self._id}, {"$set": self.model_dump()}, upsert=True)
 
     async def delete(self):
         collection = self.get_collection()
