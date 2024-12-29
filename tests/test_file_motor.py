@@ -4,7 +4,6 @@ from pathlib import Path
 import pytest
 
 from uodm import UODM, Collection, Field
-from uodm.file_motor import FileMotorClient, FileMotorCollection, FileMotorDatabase
 
 
 @pytest.fixture
@@ -207,23 +206,23 @@ async def test_file_motor_logical_operations(temp_db_path):
 @pytest.mark.asyncio
 async def test_match_logical_operator():
     """Test the match_logical_operator function directly"""
-    from uodm.file_motor_filtering import match_logical_operator, match_condition
-    
+    from uodm.file_motor_filtering import match_condition, match_logical_operator
+
     # Test document
     doc = {"value": 30, "name": "test3"}
-    
+
     # Test $and operator
     and_conditions = [{"value": {"$gt": 20}}, {"value": {"$lt": 40}}]
     assert match_logical_operator(doc, "$and", and_conditions, match_condition) is True
-    
+
     # Test $or operator
     or_conditions = [{"value": {"$lt": 20}}, {"value": {"$gt": 25}}]
     assert match_logical_operator(doc, "$or", or_conditions, match_condition) is True
-    
+
     # Test failing conditions
     failing_and = [{"value": {"$gt": 40}}, {"value": {"$lt": 50}}]
     assert match_logical_operator(doc, "$and", failing_and, match_condition) is False
-    
+
     failing_or = [{"value": {"$lt": 20}}, {"value": {"$gt": 40}}]
     assert match_logical_operator(doc, "$or", failing_or, match_condition) is False
 

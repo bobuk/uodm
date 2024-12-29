@@ -5,10 +5,9 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .file_motor_filtering import get_field_value, compare_values, match_logical_operator, match_condition
-
 from bson import ObjectId
 
+from .file_motor_filtering import match_condition
 from .types import SerializationFormat, deserialize_data, serialize_data
 
 
@@ -83,7 +82,6 @@ class FileMotorCollection:
 
     def find(self, filter_dict: Dict[str, Any]) -> "FileMotorCursor":
         return FileMotorCursor(self, filter_dict)
-
 
     async def update_one(self, filter_dict: Dict[str, Any], update_dict: Dict[str, Any], upsert: bool = False) -> "UpdateResult":
         doc = await self.find_one(filter_dict)
@@ -205,7 +203,7 @@ class FileMotorCursor:
             with open(file_path, "rb") as f:
                 doc = deserialize_data(f.read(), self.collection.database.client.serialization_format)
                 # Check if we have logical operators
-                if any(k.startswith('$') for k in self.filter_dict.keys()):
+                if any(k.startswith("$") for k in self.filter_dict.keys()):
                     if match_condition(doc, self.filter_dict):
                         matched += 1
                         if matched > self._skip:
