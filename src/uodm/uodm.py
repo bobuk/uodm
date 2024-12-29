@@ -169,22 +169,27 @@ class Collection(BaseModel, Generic[T]):
         return res
 
     @classmethod
-    async def get(cls: Type[T], **kwargs) -> Optional[T]:
+    async def get(cls: Type[T], filter_dict: Optional[Dict[str, Any]] = None, **kwargs) -> Optional[T]:
         collection = cls.get_collection()
-        kwargs = Collection.filtering(**kwargs)
-        data = await collection.find_one(kwargs)
+        filter_args = Collection.filtering(filter_dict, **kwargs)
+        data = await collection.find_one(filter_args)
         if data is None:
             return None
         return cls.create(**data)
 
     @classmethod
     async def find(
-        cls: Type[T], sort: Optional[str] = None, limit: Optional[int] = None, skip: Optional[int] = None, **kwargs
+        cls: Type[T],
+        filter_dict: Optional[Dict[str, Any]] = None,
+        sort: Optional[str] = None,
+        limit: Optional[int] = None,
+        skip: Optional[int] = None,
+        **kwargs,
     ) -> List[T]:
         collection = cls.get_collection()
 
-        kwargs = Collection.filtering(**kwargs)
-        cursor = collection.find(kwargs)
+        filter_args = Collection.filtering(filter_dict, **kwargs)
+        cursor = collection.find(filter_args)
 
         if sort is not None:
             if sort.startswith("-"):
@@ -202,10 +207,10 @@ class Collection(BaseModel, Generic[T]):
         return [cls.create(**d) for d in data]
 
     @classmethod
-    async def count(cls: Type[T], **kwargs) -> int:
+    async def count(cls: Type[T], filter_dict: Optional[Dict[str, Any]] = None, **kwargs) -> int:
         collection = cls.get_collection()
-        kwargs = Collection.filtering(**kwargs)
-        cursor = collection.find(kwargs)
+        filter_args = Collection.filtering(filter_dict, **kwargs)
+        cursor = collection.find(filter_args)
         docs = await cursor.to_list(None)
         return len(docs) if docs else 0
 
@@ -221,7 +226,6 @@ class Collection(BaseModel, Generic[T]):
     @classmethod
     async def update(cls: Type[T], items: List[T], **kwargs):
         collection = cls.get_collection()
-        kwargs = Collection.filtering(**kwargs)
         for item in items:
             if item._id is None:
                 raise ValueError("Object _id isn't set")
@@ -246,16 +250,21 @@ class Collection(BaseModel, Generic[T]):
         )
 
     @classmethod
-    def filtering(cls, **kwargs) -> Dict[str, Any]:
-        if "id" in kwargs:
-            kwargs["_id"] = kwargs.pop("id")
-        if "_id" in kwargs:
-            if isinstance(kwargs["_id"], str):
-                kwargs["_id"] = ObjectId(kwargs["_id"])
-        args = kwargs.copy()
-        for arg in kwargs.keys():
-            if "_in_" in arg or "__" in arg:
-                key = arg.replace("_in_", ".").replace("__", ".")
-                args[key] = kwargs[arg]
-                del args[arg]
-        return args
+    def filtering(cls, filter_dict: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
+        args = filter_dict.copy() if filter_dict else {}
+        args.update(kwargs)
+
+        if "id" in args:
+            args["_id"] = args.pop("id")
+        if "_id" in args:
+            if isinstance(args["_id"], str):
+                args["_id"] = ObjectId(args["_id"])
+
+        result = {}
+        for key, value in args.items():
+            if "_in_" in key or "__" in key:
+                new_key = key.replace("_in_", ".").replace("__", ".")
+                result[new_key] = value
+            else:
+                result[key] = value
+        return result

@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .file_motor_filtering import get_field_value, compare_values, match_logical_operator, match_condition
+
 from bson import ObjectId
 
 from .types import SerializationFormat, deserialize_data, serialize_data
@@ -82,27 +84,6 @@ class FileMotorCollection:
     def find(self, filter_dict: Dict[str, Any]) -> "FileMotorCursor":
         return FileMotorCursor(self, filter_dict)
 
-    def _match_condition(self, document, condition, key=None):
-        # Get the actual value to compare using the key path
-        value = document
-        if key:
-            for part in key.split('.'):
-                if isinstance(value, dict):
-                    value = value.get(part)
-                    if value is None:
-                        return False
-                else:
-                    return False
-
-        # Now compare the value with the condition
-        if isinstance(condition, dict):
-            if "$gt" in condition:
-                return isinstance(value, (int, float)) and value > condition["$gt"]
-            # Add more operators as needed
-            return False
-        if value is None:
-            return False
-        return value == condition
 
     async def update_one(self, filter_dict: Dict[str, Any], update_dict: Dict[str, Any], upsert: bool = False) -> "UpdateResult":
         doc = await self.find_one(filter_dict)
@@ -147,7 +128,7 @@ class FileMotorCollection:
             with open(file_path, "rb") as f:
                 doc = deserialize_data(f.read(), self.database.client.serialization_format)
 
-            if all(self._match_condition(doc.get(k), v) for k, v in filter_dict.items()):
+            if all(match_condition(doc.get(k), v) for k, v in filter_dict.items()):
                 matched_count += 1
                 if "$set" in update_dict:
                     doc.update(update_dict["$set"])
@@ -223,13 +204,24 @@ class FileMotorCursor:
         for file_path in files:
             with open(file_path, "rb") as f:
                 doc = deserialize_data(f.read(), self.collection.database.client.serialization_format)
-                if all(self.collection._match_condition(doc, v, k) for k, v in self.filter_dict.items()):
-                    matched += 1
-                    if matched > self._skip:
-                        if self._limit is not None and yielded >= self._limit:
-                            break
-                        yield doc
-                        yielded += 1
+                # Check if we have logical operators
+                if any(k.startswith('$') for k in self.filter_dict.keys()):
+                    if match_condition(doc, self.filter_dict):
+                        matched += 1
+                        if matched > self._skip:
+                            if self._limit is not None and yielded >= self._limit:
+                                break
+                            yield doc
+                            yielded += 1
+                else:
+                    # Regular field matching
+                    if all(match_condition(doc, v, k) for k, v in self.filter_dict.items()):
+                        matched += 1
+                        if matched > self._skip:
+                            if self._limit is not None and yielded >= self._limit:
+                                break
+                            yield doc
+                            yielded += 1
 
     async def to_list(self, length: Optional[int] = None) -> List[Dict[str, Any]]:
         result = []

@@ -91,8 +91,9 @@ async def file_example():
     )
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(file_example())
+    print("\nStarting GT operator test...")
+    asyncio.run(test_gt_operator())
+    print("Test completed.\n")
 ```
 
 File storage creates a directory structure that mirrors MongoDB:
