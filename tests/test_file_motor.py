@@ -27,7 +27,7 @@ async def test_file_motor_collection_operations(temp_db_path):
         name: str = Field(...)
         value: int = Field(...)
 
-    uodm = UODM(f"file://{temp_db_path}", connect_now=True)  # noqa
+    uodm = UODM(f"file://{temp_db_path}#json", connect_now=True)  # noqa
 
     # Test insert
     doc = TestCollection(name="test", value=42)
@@ -51,6 +51,29 @@ async def test_file_motor_collection_operations(temp_db_path):
     await doc.delete()
     deleted = await TestCollection.get(_id=doc._id)
     assert deleted is None
+
+
+@pytest.mark.asyncio
+async def test_file_motor_nested_filtering(temp_db_path):
+    class TestCollection(Collection):
+        __collection__ = "test_collection"
+        nested: dict = Field(default_factory=dict)
+
+    uodm = UODM(f"file://{temp_db_path}", connect_now=True)  # noqa
+
+    # Create test documents with nested data
+    doc1 = TestCollection(nested={"date": {"time": {"hour": 12}}})
+    doc2 = TestCollection(nested={"date": {"time": {"hour": 14}}})
+    await TestCollection.save_all([doc1, doc2])
+
+    # Test filtering with dotted notation
+    results = await TestCollection.find(nested__date__time__hour=12)
+    assert len(results) == 1
+    assert results[0].nested["date"]["time"]["hour"] == 12
+
+    # Test filtering with non-existent nested path
+    results = await TestCollection.find(nested__invalid__path=12)
+    assert len(results) == 0
 
 
 @pytest.mark.asyncio

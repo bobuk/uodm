@@ -1,0 +1,65 @@
+Starting UODM File Storage Speed Test (orjson)
+--------------------------------------------------
+
+Write Test - Inserting 50,000 documents
+Write completed in 7.58 seconds
+Average write speed: 6593.35 docs/second
+
+Read Tests:
+Single document read: 0.7225 seconds
+Filtered read (0 docs): 1.75 seconds
+Sorted read (1000 docs): 1.30 seconds
+
+Update Test:
+Bulk update (100 docs): 0.01 seconds
+
+Count query: 1.25 seconds
+Found 0 documents
+
+Memory Usage:
+Database size: 6.85 MB
+Average document size: 143.56 bytes
+
+Starting UODM File Storage Speed Test (json)
+--------------------------------------------------
+
+Write Test - Inserting 50,000 documents
+Write completed in 9.20 seconds
+Average write speed: 5434.02 docs/second
+
+Read Tests:
+Single document read: 0.9267 seconds
+Filtered read (0 docs): 1.45 seconds
+Sorted read (1000 docs): 1.19 seconds
+
+Update Test:
+Bulk update (100 docs): 0.02 seconds
+
+Count query: 1.37 seconds
+Found 0 documents
+
+Memory Usage:
+Database size: 6.85 MB
+Average document size: 143.56 bytes
+
+Starting UODM File Storage Speed Test (pickle)
+--------------------------------------------------
+
+Write Test - Inserting 50,000 documents
+Write completed in 6.92 seconds
+Average write speed: 7228.34 docs/second
+
+Read Tests:
+Single document read: 0.2626 seconds
+Filtered read (0 docs): 1.45 seconds
+Sorted read (1000 docs): 1.31 seconds
+
+Update Test:
+Bulk update (100 docs): 0.02 seconds
+
+Count query: 1.30 seconds
+Found 0 documents
+
+Memory Usage:
+Database size: 6.85 MB
+Average document size: 143.56 bytes

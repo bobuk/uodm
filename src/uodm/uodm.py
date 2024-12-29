@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from pydantic import Field as PydanticField
 
 from .file_motor import FileMotorClient, FileMotorCollection, FileMotorDatabase
+from .types import SerializationFormat
 
 EmbeddedModel = BaseModel
 Field = PydanticField
@@ -32,6 +33,19 @@ class UODM:
         self.mongo: Optional[Union[AgnosticClient, FileMotorClient]] = None
         self.database: Optional[Union[AgnosticDatabase, FileMotorDatabase]] = None
         self.url_or_client = url_or_client
+        self.serialization_format = SerializationFormat.JSON
+
+        if isinstance(url_or_client, str):
+            if "#pickle" in url_or_client:
+                self.serialization_format = SerializationFormat.PICKLE
+                self.url_or_client = url_or_client.replace("#pickle", "")
+            elif "#json" in url_or_client:
+                self.serialization_format = SerializationFormat.JSON
+                self.url_or_client = url_or_client.replace("#json", "")
+            elif "#orjson" in url_or_client:
+                self.serialization_format = SerializationFormat.ORJSON
+                self.url_or_client = url_or_client.replace("#orjson", "")
+
         if connect_now:
             self.connect()
 
@@ -190,13 +204,13 @@ class Collection(BaseModel, Generic[T]):
     @classmethod
     async def count(cls: Type[T], **kwargs) -> int:
         collection = cls.get_collection()
-
         kwargs = Collection.filtering(**kwargs)
         cursor = collection.find(kwargs)
-        return len(await cursor.to_list(None))
+        docs = await cursor.to_list(None)
+        return len(docs) if docs else 0
 
     @classmethod
-    def create(cls: Type[T], **kwargs):
+    def create(cls: Type[T], **kwargs) -> T:
         object_id = kwargs.pop("_id", None)
         if object_id is None:
             raise ValueError("Object _id isn't set")
@@ -231,8 +245,8 @@ class Collection(BaseModel, Generic[T]):
             codec_options=None,
         )
 
-    @staticmethod
-    def filtering(**kwargs) -> Dict[str, Any]:
+    @classmethod
+    def filtering(cls, **kwargs) -> Dict[str, Any]:
         if "id" in kwargs:
             kwargs["_id"] = kwargs.pop("id")
         if "_id" in kwargs:

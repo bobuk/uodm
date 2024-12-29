@@ -1,6 +1,6 @@
 [project]
 name = "uodm"
-version = "0.2.0"
+version = "0.2.1"
 description = "ultraminimalistic Python library for simple object-document mappint for asyncronous mongodb"
 authors = [{ name = "Grigory Bakunov", email = "bobuk@rubedo.cloud" }]
 dependencies = ["pydantic>=2.10.2", "motor>=3.4.0"]
@@ -33,5 +33,10 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "pytest>=8.3.4",
 ]
+
+[project.optional-dependencies]
+orjson = ["orjson>=3.9.10"]
+
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 asyncio_mode = "auto"
