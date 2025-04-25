@@ -18,10 +18,12 @@ class SerializationFormat(str, Enum):
     JSON = "json"
     ORJSON = "orjson"
     PICKLE = "pickle"
+    SQLITE = "sqlite"  # Added SQLite as a special format
 
 def get_collection_type():
     from .file_motor import FileMotorCollection
-    return Union[AgnosticCollection, FileMotorCollection]
+    from .sqlite_motor import SQLiteMotorCollection
+    return Union[AgnosticCollection, FileMotorCollection, SQLiteMotorCollection]
 
 CollectionType = Any  # Will be replaced at runtime
 

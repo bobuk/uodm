@@ -9,7 +9,10 @@ Welcome to `uodm`, the fun-sized, feature-packed async Object-Document Mapper th
 - 🎳 **Simple and expressive models:** Define your models and let uodm handle the rest.
 - 🛠️ **Auto-index management:** Because you've got better things to do than managing indexes manually.
 - 🌍 **Global database access:** Connect once, use everywhere (kinda like your Netflix subscription but for databases).
-- 📁 **File-based storage:** Perfect for development, testing, or simple applications without MongoDB (supported since v0.2).
+- 🗄️ **Multiple storage backends:** Choose the right storage for your needs:
+  - **MongoDB:** For production-grade applications with scalability requirements
+  - **SQLite:** For embedded applications or when you need more robust local storage (new!)
+  - **File-based:** For development, testing, or simple applications
 
 ## Quick Start
 
@@ -49,6 +52,41 @@ async def mongodb_example():
     for book in books:
         print(book)
 ```
+
+### SQLite Storage
+
+UODM now supports SQLite as a robust local database option that bridges the gap between file-based storage and MongoDB:
+
+```python
+async def sqlite_example():
+    # Connect to SQLite database
+    # File-based SQLite database
+    db = uodm.UODM("sqlite:///path/to/database.db")
+    
+    # Or use in-memory SQLite database for testing
+    # db = uodm.UODM("sqlite://")
+    
+    await db.setup()
+
+    # Same API as MongoDB and file storage!
+    w = Books(title="War and Peace", author="Tolstoy", year=1869)
+    await w.save()
+
+    # All MongoDB-style queries work
+    book = await Books.get(title="War and Peace")
+    books = await Books.find(year={"$gt": 1900})
+    
+    # Remember to close connections when done (important for SQLite)
+    await db.close()
+```
+
+SQLite storage is perfect for:
+- Embedded applications requiring a local database
+- Applications needing better transactional support than file-based storage
+- Higher performance with larger datasets than file-based storage
+- Development and testing without MongoDB infrastructure
+
+SQLite data is stored in a single database file, with each collection as a separate table. Indexes are stored both as SQLite indexes (for better query performance) and as metadata for compatibility with the ODM layer.
 
 ### File-based Storage
 

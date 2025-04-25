@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from pydantic import Field as PydanticField
 
 from .file_motor import FileMotorClient, FileMotorCollection, FileMotorDatabase
+from .sqlite_motor import SQLiteMotorClient, SQLiteMotorCollection, SQLiteMotorDatabase
 from .types import SerializationFormat
 
 EmbeddedModel = BaseModel
@@ -29,9 +30,9 @@ T = TypeVar("T", bound="Collection")
 
 
 class UODM:
-    def __init__(self, url_or_client: Union[str, AgnosticClient, FileMotorClient], connect_now=True):
-        self.mongo: Optional[Union[AgnosticClient, FileMotorClient]] = None
-        self.database: Optional[Union[AgnosticDatabase, FileMotorDatabase]] = None
+    def __init__(self, url_or_client: Union[str, AgnosticClient, FileMotorClient, SQLiteMotorClient], connect_now=True):
+        self.mongo: Optional[Union[AgnosticClient, FileMotorClient, SQLiteMotorClient]] = None
+        self.database: Optional[Union[AgnosticDatabase, FileMotorDatabase, SQLiteMotorDatabase]] = None
         self.url_or_client = url_or_client
         self.serialization_format = SerializationFormat.JSON
 
@@ -54,7 +55,15 @@ class UODM:
         if isinstance(self.url_or_client, str):
             if self.url_or_client.startswith("file://"):
                 path = self.url_or_client[7:]
-                self.mongo = FileMotorClient(path)
+                self.mongo = FileMotorClient(path, serialization_format=self.serialization_format)
+            elif self.url_or_client.startswith("sqlite://"):
+                # Handle SQLite URL (sqlite:///path/to/db.sqlite)
+                # Strip the 'sqlite://' prefix to get the path
+                path = self.url_or_client[9:]
+                # Handle special case for in-memory database
+                if not path:
+                    path = ":memory:"
+                self.mongo = SQLiteMotorClient(path)
             else:
                 self.mongo = motor_asyncio.AsyncIOMotorClient(self.url_or_client)
         else:
@@ -65,7 +74,7 @@ class UODM:
             pass
         _CURRENT_DB = self
 
-    def apply_connection(self, client: Union[AgnosticClient, FileMotorClient]):
+    def apply_connection(self, client: Union[AgnosticClient, FileMotorClient, SQLiteMotorClient]):
         global _CURRENT_DB
         self.mongo = client
         default = client.get_default_database()
@@ -83,10 +92,13 @@ class UODM:
         return self
 
     async def close(self):
-        pass
+        # Close any open SQLite connection
+        if self.mongo and isinstance(self.mongo, SQLiteMotorClient):
+            await self.mongo.close()
+        # For MongoDB and FileMotorClient, no explicit close is needed currently
 
     @property
-    def db(self) -> Union[AgnosticDatabase, FileMotorDatabase]:
+    def db(self) -> Union[AgnosticDatabase, FileMotorDatabase, SQLiteMotorDatabase]:
         if self.database is None:
             raise ValueError("Database is not connected")
         return self.database
@@ -240,7 +252,7 @@ class Collection(BaseModel, Generic[T]):
             await item.save()
 
     @classmethod
-    def get_collection(cls) -> Union[AgnosticCollection, FileMotorCollection]:
+    def get_collection(cls) -> Union[AgnosticCollection, FileMotorCollection, SQLiteMotorCollection]:
         options = cls.get_model_config()
         name = str(options.get("collection", normalize(cls.__name__)))
 
