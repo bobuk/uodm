@@ -346,13 +346,31 @@ class Collection(BaseModel, Generic[T]):
         
         if is_mongodb:
             try:
-                # MongoDB native change streams
-                # Check if watch method exists before calling it
-                if hasattr(collection, 'watch'):
+                # First, check if replication is enabled on this MongoDB instance
+                # by seeing if the adminCommand method exists and then running isMaster
+                use_polling = False
+                if hasattr(db.mongo, 'admin'):
+                    try:
+                        # Check replication status
+                        is_master_info = await db.mongo.admin.command('isMaster')
+                        # If setName is missing, the MongoDB server is not running with replication
+                        # and therefore change streams are not available
+                        if 'setName' not in is_master_info:
+                            use_polling = True
+                            print("MongoDB is running without replication, change streams not available. Using polling fallback.")
+                    except Exception as e:
+                        print(f"Error checking MongoDB replication status: {e}")
+                        use_polling = True
+                
+                if not use_polling and hasattr(collection, 'watch'):
+                    # MongoDB native change streams - only if replication is enabled
                     mongo_stream = collection.watch(pipeline, **kwargs)
+                    stream = MongoChangeStream(mongo_stream)
                 else:
-                    raise AttributeError("Collection does not support watch method")
-                stream = MongoChangeStream(mongo_stream)
+                    # Fall back to polling if no replication or watch method doesn't exist
+                    if not use_polling:
+                        print("Collection does not support watch method, using polling fallback.")
+                    stream = PollingChangeStream(collection, poll_interval=poll_interval)
             except Exception as e:
                 print(f"Error creating MongoDB change stream: {e}")
                 # Fall back to polling-based implementation
