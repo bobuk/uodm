@@ -8,10 +8,11 @@ Welcome to `uodm`, the fun-sized, feature-packed async Object-Document Mapper th
 - 📚 **Asynchronous bliss:** Leveraging `asyncio` for non-blocking database operations.
 - 🎳 **Simple and expressive models:** Define your models and let uodm handle the rest.
 - 🛠️ **Auto-index management:** Because you've got better things to do than managing indexes manually.
+- 🔄 **Change streams:** Monitor collection changes in real-time with a consistent API across all backends.
 - 🌍 **Global database access:** Connect once, use everywhere (kinda like your Netflix subscription but for databases).
 - 🗄️ **Multiple storage backends:** Choose the right storage for your needs:
   - **MongoDB:** For production-grade applications with scalability requirements
-  - **SQLite:** For embedded applications or when you need more robust local storage (new!)
+  - **SQLite:** For embedded applications or when you need more robust local storage
   - **File-based:** For development, testing, or simple applications
 
 ## Quick Start
@@ -62,10 +63,10 @@ async def sqlite_example():
     # Connect to SQLite database
     # File-based SQLite database
     db = uodm.UODM("sqlite:///path/to/database.db")
-    
+
     # Or use in-memory SQLite database for testing
     # db = uodm.UODM("sqlite://")
-    
+
     await db.setup()
 
     # Same API as MongoDB and file storage!
@@ -75,7 +76,7 @@ async def sqlite_example():
     # All MongoDB-style queries work
     book = await Books.get(title="War and Peace")
     books = await Books.find(year={"$gt": 1900})
-    
+
     # Remember to close connections when done (important for SQLite)
     await db.close()
 ```
@@ -148,6 +149,66 @@ File storage creates a directory structure that mirrors MongoDB:
 Each document is stored in its own JSON file (or pickle/orjson), named by its ID.
 Indexes are maintained in a special `_indexes.json` file.
 
+### Change Streams
+
+UODM now supports change streams across all backends, allowing you to monitor and react to changes in your collections in real-time. MongoDB uses native change streams, while SQLite and file-based backends use a polling-based implementation that mimics the same API.
+
+```python
+import asyncio
+import uodm
+
+class Books(uodm.Collection):
+    title: str
+    author: str
+    year: int
+
+    __collection__ = "books"
+
+async def handle_change(change):
+    """React to changes in the books collection"""
+    op_type = change.operation_type
+
+    if op_type == 'insert':
+        doc = change.full_document
+        print(f"New book added: '{doc.get('title')}'")
+    elif op_type == 'update':
+        doc = change.full_document
+        print(f"Book updated: '{doc.get('title')}'")
+    elif op_type == 'delete':
+        doc_id = change.document_key.get('_id')
+        print(f"Book deleted: ID {doc_id}")
+
+async def change_stream_example():
+    # Connect to any supported backend
+    db = uodm.UODM("file:///path/to/data")
+    # Or use MongoDB: db = uodm.UODM("mongodb://localhost:27017/test")
+    # Or use SQLite: db = uodm.UODM("sqlite:///path/to/database.db")
+
+    await db.setup()
+
+    # Start watching for changes
+    stream = await Books.watch_changes(handle_change)
+
+    # Make some changes
+    book = Books(title="War and Peace", author="Tolstoy", year=1869)
+    await book.save()
+
+    # Update the book
+    book.year = 1870
+    await book.save()
+
+    # Delete the book
+    await book.delete()
+
+    # When done, close the change stream
+    await stream.close()
+
+    # Close the database connection
+    await db.close()
+```
+
+For MongoDB, this uses native change streams. For file and SQLite backends, UODM automatically falls back to a polling-based implementation that provides the same consistent API.
+
 ### Limitations of File-based Storage
 
 While file-based storage is great for development and simple applications, be aware of these limitations:
@@ -209,6 +270,3 @@ Pull requests? Issues? Existential queries about your database? All are welcome!
 ## License
 
 This project is under "The Unlicense". Yes, it's really unlicensed. Like a fisherman without a fishing license. 🎣
-
----
-Feel free to connect with me or just stop by to say "Hi, MongoDB!" 👋

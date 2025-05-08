@@ -4,7 +4,7 @@ from typing import Any
 
 def get_field_value(document: dict, field_path: str) -> Any:
     """Extract nested field value from document."""
-    value = document
+    value: Any = document
     for part in field_path.split("."):
         if isinstance(value, dict):
             value = value.get(part)
@@ -29,24 +29,32 @@ def compare_values(value: Any, operator: str, target_value: Any) -> bool:
     if operator in ["$gt", "$lt", "$gte", "$lte"]:
         try:
             # Ensure both values are the same type for comparison
+            # Convert to numeric types for comparison
+            from typing import Union
+            
+            # Define variables without redundant type annotations
+            num_value_conv: Union[int, float]
+            num_target_conv: Union[int, float]
+            
             if isinstance(value, int) and isinstance(target_value, int):
-                num_value = value
-                num_target = target_value
+                num_value_conv = value
+                num_target_conv = target_value
             else:
-                num_value = float(value)
-                num_target = float(target_value)
+                # Convert to float for comparison
+                num_value_conv = float(value)
+                num_target_conv = float(target_value)
 
             if operator == "$gt":
-                result = num_value > num_target
+                result = num_value_conv > num_target_conv
                 return result
             elif operator == "$lt":
-                result = num_value < num_target
+                result = num_value_conv < num_target_conv
                 return result
             elif operator == "$gte":
-                result = num_value >= num_target
+                result = num_value_conv >= num_target_conv
                 return result
             elif operator == "$lte":
-                result = num_value <= num_target
+                result = num_value_conv <= num_target_conv
                 return result
         except (ValueError, TypeError) as e:
             print(f"Error in numeric comparison: {e}")

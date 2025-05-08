@@ -49,9 +49,10 @@ async def run_benchmark(format: SerializationFormat):
 
     # Single document read
     start_time = time.time()
-    doc = await TestDoc.get(name="test_1000")
-    single_read_time = time.time() - start_time
-    print(f"Single document read: {single_read_time:.4f} seconds")
+    single_doc = await TestDoc.get(name="test_1000")
+    if single_doc is not None:
+        single_read_time = time.time() - start_time
+        print(f"Single document read: {single_read_time:.4f} seconds")
 
     # Multiple document read with filter
     start_time = time.time()

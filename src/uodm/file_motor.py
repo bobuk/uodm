@@ -166,8 +166,8 @@ class FileMotorCursor:
         self.filter_dict = filter_dict
         self._sort_key = None
         self._sort_direction = 1
-        self._limit = None
-        self._skip = 0
+        self._limit: Optional[int] = None
+        self._skip: int = 0
 
     def sort(self, key_direction: List[tuple]) -> "FileMotorCursor":
         if key_direction:
